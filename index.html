@@ -1,0 +1,618 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教師教學小工具</title>
+<style>
+  :root{
+    --bg:#07120d; --card:#0e1f17; --ink:#d7efe2; --muted:#7da893;
+    --accent:#00e5a0; --accent2:#37f5c8; --good:#00c97f; --warn:#ffc233; --bad:#ff5c5c;
+    --line:#1c3a2c; --glow:0 0 12px rgba(0,229,160,.45);
+    --radius:14px; --shadow:0 4px 20px rgba(0,0,0,.45);
+    --mono:Consolas,"SF Mono","Courier New",monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif; color:var(--ink); min-height:100vh;
+    background-color:var(--bg);
+    background-image:
+      linear-gradient(rgba(0,229,160,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,229,160,.035) 1px,transparent 1px),
+      radial-gradient(ellipse at 50% -10%,rgba(15,43,30,.9) 0%,rgba(7,18,13,0) 60%);
+    background-size:34px 34px,34px 34px,100% 100%;
+  }
+  header{
+    background:linear-gradient(120deg,#0a1f16,#123528 60%,#0a1f16); color:var(--ink);
+    padding:16px 24px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    border-bottom:1px solid var(--accent); box-shadow:0 0 18px rgba(0,229,160,.25);
+  }
+  header h1{font-size:1.5rem; letter-spacing:3px; color:var(--accent); text-shadow:var(--glow);}
+  header .sub{opacity:.8; font-size:.9rem; font-family:var(--mono); letter-spacing:1px;}
+  nav{display:flex; gap:8px; padding:12px 20px; flex-wrap:wrap; background:rgba(10,26,19,.92); backdrop-filter:blur(6px); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:10;}
+  nav button{border:1px solid var(--line); background:transparent; color:var(--muted); padding:10px 18px; border-radius:8px; font-size:1rem; cursor:pointer; font-family:inherit; transition:.15s;}
+  nav button:hover{border-color:var(--accent); color:var(--ink);}
+  nav button.active{background:rgba(0,229,160,.12); border-color:var(--accent); color:var(--accent); box-shadow:var(--glow) inset,0 0 8px rgba(0,229,160,.3);}
+  main{max-width:1100px; margin:0 auto; padding:24px 16px 60px;}
+  section.panel{display:none;}
+  section.panel.show{display:block; animation:fade .25s;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1;}}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px; margin-bottom:18px;}
+  .card h2{font-size:1.2rem; margin-bottom:12px; color:var(--accent); letter-spacing:1px;}
+  .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:10px;}
+  label{font-size:.95rem; color:var(--muted);}
+  input[type=text],input[type=number],textarea,select{
+    font-family:inherit; font-size:1rem; padding:9px 12px; border:1px solid var(--line); border-radius:8px; background:#091811; color:var(--ink);
+  }
+  input:focus,textarea:focus{outline:none; border-color:var(--accent); box-shadow:0 0 6px rgba(0,229,160,.35);}
+  textarea{width:100%; min-height:90px; resize:vertical;}
+  .btn{font-family:inherit; font-size:1rem; padding:10px 20px; border:1px solid transparent; border-radius:8px; cursor:pointer; background:var(--accent); color:#04120c; font-weight:bold; transition:.15s;}
+  .btn:hover{filter:brightness(1.12); box-shadow:var(--glow);}
+  .btn.gray{background:transparent; border-color:var(--line); color:var(--muted); font-weight:normal;}
+  .btn.gray:hover{border-color:var(--accent); color:var(--ink); box-shadow:none;}
+  .btn.green{background:var(--good); color:#04120c;}
+  .btn.red{background:transparent; border-color:var(--bad); color:var(--bad); font-weight:normal;}
+  .btn.big{font-size:1.25rem; padding:14px 34px; border-radius:10px;}
+  .hint{font-size:.85rem; color:var(--muted);}
+  .chip{display:inline-block; background:#12281d; border:1px solid var(--line); border-radius:6px; padding:5px 12px; margin:3px; font-size:1.05rem; font-family:var(--mono);}
+  .chip.drawn{background:rgba(0,229,160,.12); border-color:var(--accent); color:var(--accent); font-weight:bold;}
+  /* 倒數計時 */
+  .time-display{font-size:clamp(4rem,18vw,10rem); font-weight:800; text-align:center; font-variant-numeric:tabular-nums; letter-spacing:4px; line-height:1.1; font-family:var(--mono); color:var(--accent); text-shadow:0 0 24px rgba(0,229,160,.5);}
+  .time-display.warning{color:var(--warn); text-shadow:0 0 24px rgba(255,194,51,.5);}
+  .time-display.danger{color:var(--bad); text-shadow:0 0 24px rgba(255,92,92,.6); animation:blink .6s infinite;}
+  @keyframes blink{50%{opacity:.35;}}
+  .timer-bar{height:14px; background:#0a1a12; border:1px solid var(--line); border-radius:999px; overflow:hidden; margin:14px 0;}
+  .timer-bar>div{height:100%; background:linear-gradient(90deg,var(--good),var(--accent2)); width:100%; transition:width .5s linear; border-radius:999px; box-shadow:0 0 10px rgba(0,229,160,.6);}
+  body.alarm{animation:alarmbg .5s infinite;}
+  @keyframes alarmbg{50%{background-color:#3a0d0d;}}
+  .center{text-align:center;}
+  /* 抽籤 */
+  .draw-display{font-size:clamp(4rem,20vw,11rem); font-weight:800; text-align:center; color:var(--accent2); min-height:1.2em; line-height:1.2; font-family:var(--mono); text-shadow:0 0 30px rgba(55,245,200,.55);}
+  /* 分組 */
+  .groups{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px;}
+  .group-card{border-radius:14px; padding:16px; color:#fff;}
+  .group-card h3{margin-bottom:8px; font-size:1.1rem;}
+  .group-card .members{font-size:1.15rem; line-height:1.7;}
+  /* 計分板 */
+  .teams{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px;}
+  .team{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; text-align:center; position:relative;}
+  .team.leader{border-color:var(--warn); box-shadow:0 0 14px rgba(255,194,51,.35);}
+  .team .tname{font-size:1.1rem; font-weight:bold; margin-bottom:6px;}
+  .team .tscore{font-size:3.2rem; font-weight:800; color:var(--accent); margin:4px 0; font-family:var(--mono); text-shadow:0 0 16px rgba(0,229,160,.45);}
+  .team .tbtns{display:flex; gap:6px; justify-content:center; flex-wrap:wrap;}
+  .team .tbtns button{font-family:inherit; border:none; border-radius:8px; padding:7px 13px; font-size:1rem; cursor:pointer; color:#04120c; font-weight:bold;}
+  .team .del{position:absolute; top:6px; right:10px; background:none; border:none; color:var(--muted); font-size:1.1rem; cursor:pointer;}
+  .team .del:hover{color:var(--bad);}
+  /* 轉盤 */
+  .wheel-wrap{display:flex; flex-direction:column; align-items:center; gap:14px;}
+  #wheelCanvas{max-width:100%;}
+  .wheel-winner{font-size:2.4rem; font-weight:800; color:var(--accent2); min-height:1.3em;}
+  /* 音量 */
+  .noise-bar-wrap{height:44px; background:#0a1a12; border:1px solid var(--line); border-radius:12px; overflow:hidden; position:relative; margin:12px 0;}
+  .noise-bar{height:100%; width:0%; background:linear-gradient(90deg,var(--good),var(--warn),var(--bad)); transition:width .08s;}
+  .noise-threshold{position:absolute; top:0; bottom:0; width:3px; background:var(--bad);}
+  .noise-status{font-size:2rem; font-weight:800; text-align:center; margin-top:8px;}
+  .noise-status.quiet{color:var(--good);}
+  .noise-status.loud{color:var(--bad); animation:blink .5s infinite;}
+  /* 隨機順序 */
+  .order-list{display:flex; flex-wrap:wrap; gap:8px;}
+  .order-list .chip{font-size:1.15rem;}
+  footer{text-align:center; color:var(--muted); font-size:.85rem; padding:20px;}
+  @media (max-width:600px){ header h1{font-size:1.2rem;} nav button{padding:8px 12px; font-size:.9rem;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧰 教師教學小工具</h1>
+  <span class="sub">倒數計時・抽籤・分組・計分・轉盤・音量偵測</span>
+</header>
+
+<nav id="nav">
+  <button data-panel="roster" class="active">👥 名單設定</button>
+  <button data-panel="timer">⏳ 倒數計時</button>
+  <button data-panel="stopwatch">⏱️ 碼表</button>
+  <button data-panel="draw">🎯 依序抽籤</button>
+  <button data-panel="group">🧩 隨機分組</button>
+  <button data-panel="wheel">🎡 幸運轉盤</button>
+  <button data-panel="score">🏆 計分板</button>
+  <button data-panel="order">🔀 隨機順序</button>
+  <button data-panel="noise">🔊 音量偵測</button>
+</nav>
+
+<main>
+
+<!-- 名單設定 -->
+<section class="panel show" id="panel-roster">
+  <div class="card">
+    <h2>👥 班級名單設定（抽籤／分組／轉盤／隨機順序 共用）</h2>
+    <div class="row">
+      <label><input type="radio" name="rosterMode" value="number" checked> 座號模式</label>
+      <label><input type="radio" name="rosterMode" value="name"> 姓名模式</label>
+    </div>
+    <div id="numberMode">
+      <div class="row">
+        <label>座號從</label><input type="number" id="numStart" value="1" min="1" style="width:80px">
+        <label>到</label><input type="number" id="numEnd" value="30" min="1" style="width:80px">
+      </div>
+      <div class="row">
+        <label>排除號碼（缺席／不存在，用逗號分隔）</label>
+        <input type="text" id="numExclude" placeholder="例如：3,11,20" style="flex:1; min-width:200px">
+      </div>
+    </div>
+    <div id="nameMode" style="display:none">
+      <label>貼上姓名名單（每行一個，或用逗號分隔）</label>
+      <textarea id="nameList" placeholder="王小明&#10;李小華&#10;陳小美"></textarea>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="saveRoster">💾 儲存名單</button>
+      <span class="hint" id="rosterInfo"></span>
+    </div>
+    <div id="rosterPreview" style="margin-top:8px"></div>
+  </div>
+</section>
+
+<!-- 倒數計時 -->
+<section class="panel" id="panel-timer">
+  <div class="card center">
+    <h2>⏳ 倒數計時器</h2>
+    <div class="row" style="justify-content:center">
+      <button class="btn gray" onclick="setTimer(60)">1 分</button>
+      <button class="btn gray" onclick="setTimer(180)">3 分</button>
+      <button class="btn gray" onclick="setTimer(300)">5 分</button>
+      <button class="btn gray" onclick="setTimer(600)">10 分</button>
+      <label>自訂</label>
+      <input type="number" id="tMin" value="5" min="0" max="180" style="width:70px"><label>分</label>
+      <input type="number" id="tSec" value="0" min="0" max="59" style="width:70px"><label>秒</label>
+      <button class="btn gray" onclick="setTimerCustom()">設定</button>
+    </div>
+    <div class="time-display" id="timerDisplay">05:00</div>
+    <div class="timer-bar"><div id="timerBarFill"></div></div>
+    <div class="row" style="justify-content:center">
+      <button class="btn big green" id="timerStartBtn" onclick="toggleTimer()">▶ 開始</button>
+      <button class="btn big gray" onclick="resetTimer()">↺ 重設</button>
+    </div>
+    <p class="hint">時間到會發出提示音並閃爍畫面（點一下畫面即可停止警示）</p>
+  </div>
+</section>
+
+<!-- 碼表 -->
+<section class="panel" id="panel-stopwatch">
+  <div class="card center">
+    <h2>⏱️ 碼表</h2>
+    <div class="time-display" id="swDisplay">00:00.0</div>
+    <div class="row" style="justify-content:center">
+      <button class="btn big green" id="swStartBtn" onclick="toggleSw()">▶ 開始</button>
+      <button class="btn big" onclick="lapSw()">🚩 分段</button>
+      <button class="btn big gray" onclick="resetSw()">↺ 重設</button>
+    </div>
+    <div id="swLaps" style="margin-top:12px; font-size:1.1rem; line-height:1.8"></div>
+  </div>
+</section>
+
+<!-- 依序抽籤 -->
+<section class="panel" id="panel-draw">
+  <div class="card center">
+    <h2>🎯 依序抽籤（不重複）</h2>
+    <div class="draw-display" id="drawDisplay">？</div>
+    <div class="row" style="justify-content:center">
+      <button class="btn big" onclick="drawOne()">🎲 抽一位</button>
+      <button class="btn big gray" onclick="resetDraw()">↺ 重置號碼池</button>
+    </div>
+    <p class="hint" id="drawRemainInfo"></p>
+  </div>
+  <div class="card">
+    <h2>📋 已抽出（依順序）</h2>
+    <div id="drawnList"><span class="hint">尚未抽籤</span></div>
+  </div>
+  <div class="card">
+    <h2>⏳ 剩餘名單</h2>
+    <div id="remainList"></div>
+  </div>
+</section>
+
+<!-- 隨機分組 -->
+<section class="panel" id="panel-group">
+  <div class="card">
+    <h2>🧩 隨機分組</h2>
+    <div class="row">
+      <label><input type="radio" name="groupMode" value="count" checked> 指定組數</label>
+      <input type="number" id="groupCount" value="4" min="2" style="width:80px">
+      <label>組</label>
+    </div>
+    <div class="row">
+      <label><input type="radio" name="groupMode" value="size"> 指定每組人數</label>
+      <input type="number" id="groupSize" value="5" min="2" style="width:80px">
+      <label>人</label>
+    </div>
+    <div class="row">
+      <button class="btn big" onclick="doGroup()">🎲 開始分組</button>
+    </div>
+    <p class="hint">使用「名單設定」中的名單；人數無法整除時會平均分配。</p>
+  </div>
+  <div class="groups" id="groupResult"></div>
+</section>
+
+<!-- 幸運轉盤 -->
+<section class="panel" id="panel-wheel">
+  <div class="card wheel-wrap">
+    <h2>🎡 幸運轉盤</h2>
+    <div class="wheel-winner" id="wheelWinner"></div>
+    <div style="position:relative">
+      <div style="position:absolute; left:50%; top:-6px; transform:translateX(-50%); font-size:2rem; z-index:2">🔻</div>
+      <canvas id="wheelCanvas" width="420" height="420"></canvas>
+    </div>
+    <div class="row" style="justify-content:center">
+      <button class="btn big" id="spinBtn" onclick="spinWheel()">🎡 旋轉！</button>
+      <button class="btn big gray" onclick="resetWheel()">↺ 重置</button>
+      <label><input type="checkbox" id="wheelRemove" checked> 抽中後移除</label>
+    </div>
+    <p class="hint" id="wheelInfo"></p>
+  </div>
+</section>
+
+<!-- 計分板 -->
+<section class="panel" id="panel-score">
+  <div class="card">
+    <h2>🏆 小組計分板</h2>
+    <div class="row">
+      <input type="text" id="newTeamName" placeholder="輸入組別名稱" style="min-width:180px">
+      <button class="btn" onclick="addTeam()">➕ 新增組別</button>
+      <button class="btn gray" onclick="quickTeams()">快速建立 4 組</button>
+      <button class="btn red" onclick="resetScores()">歸零</button>
+      <button class="btn red" onclick="clearTeams()">全部清除</button>
+    </div>
+  </div>
+  <div class="teams" id="teamsWrap"></div>
+</section>
+
+<!-- 隨機順序 -->
+<section class="panel" id="panel-order">
+  <div class="card">
+    <h2>🔀 隨機順序產生器</h2>
+    <p class="hint" style="margin-bottom:10px">將全班名單打亂成一個順序（例如：上台報告順序）。</p>
+    <button class="btn big" onclick="makeOrder()">🎲 產生隨機順序</button>
+    <div class="order-list" id="orderResult" style="margin-top:16px"></div>
+  </div>
+</section>
+
+<!-- 音量偵測 -->
+<section class="panel" id="panel-noise">
+  <div class="card">
+    <h2>🔊 教室音量偵測（安靜提示）</h2>
+    <div class="row">
+      <button class="btn green" id="noiseBtn" onclick="toggleNoise()">🎤 開始偵測</button>
+      <label>警戒線</label>
+      <input type="range" id="noiseThreshold" min="10" max="95" value="60" style="width:180px">
+      <span id="noiseThresholdVal">60%</span>
+    </div>
+    <div class="noise-bar-wrap">
+      <div class="noise-bar" id="noiseBar"></div>
+      <div class="noise-threshold" id="noiseLine" style="left:60%"></div>
+    </div>
+    <div class="noise-status quiet" id="noiseStatus">尚未開始</div>
+    <p class="hint center" style="margin-top:8px">超過警戒線 <span id="noiseCount">0</span> 次｜需要允許瀏覽器使用麥克風</p>
+  </div>
+</section>
+
+</main>
+<footer>教師教學小工具｜單一檔案，離線可用，資料儲存在本機瀏覽器</footer>
+
+<script>
+"use strict";
+/* ========== 共用 ========== */
+const $ = id => document.getElementById(id);
+function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function beep(freq=880, dur=0.18, when=0){
+  try{
+    window._actx = window._actx || new (window.AudioContext||window.webkitAudioContext)();
+    const ctx=window._actx, o=ctx.createOscillator(), g=ctx.createGain();
+    o.frequency.value=freq; o.type="sine"; o.connect(g); g.connect(ctx.destination);
+    const t=ctx.currentTime+when;
+    g.gain.setValueAtTime(0.001,t); g.gain.exponentialRampToValueAtTime(0.4,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.start(t); o.stop(t+dur+0.05);
+  }catch(e){}
+}
+function alarmSound(){ for(let i=0;i<6;i++){ beep(i%2?660:990,0.22,i*0.28); } }
+
+/* ========== 分頁切換 ========== */
+document.querySelectorAll("#nav button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll("#nav button").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll("section.panel").forEach(p=>p.classList.remove("show"));
+    btn.classList.add("active");
+    $("panel-"+btn.dataset.panel).classList.add("show");
+    if(btn.dataset.panel==="wheel") drawWheel();
+    if(btn.dataset.panel==="draw") renderDraw();
+  });
+});
+
+/* ========== 名單設定 ========== */
+function loadRosterSettings(){
+  try{ return JSON.parse(localStorage.getItem("ct_roster")||"null"); }catch(e){ return null; }
+}
+function saveRosterSettings(){
+  const mode=document.querySelector('input[name=rosterMode]:checked').value;
+  const data={mode, start:$("numStart").value, end:$("numEnd").value, exclude:$("numExclude").value, names:$("nameList").value};
+  localStorage.setItem("ct_roster", JSON.stringify(data));
+  resetDraw(); resetWheel(); renderRosterPreview();
+}
+function getRoster(){
+  const mode=document.querySelector('input[name=rosterMode]:checked').value;
+  if(mode==="number"){
+    const s=parseInt($("numStart").value)||1, e=parseInt($("numEnd").value)||30;
+    const ex=new Set(($("numExclude").value||"").split(/[,，\s]+/).filter(x=>x).map(Number));
+    const list=[];
+    for(let i=s;i<=e;i++){ if(!ex.has(i)) list.push(String(i)); }
+    return list;
+  }else{
+    return ($("nameList").value||"").split(/[\n,，]+/).map(x=>x.trim()).filter(x=>x);
+  }
+}
+function renderRosterPreview(){
+  const r=getRoster();
+  $("rosterInfo").textContent=`目前名單共 ${r.length} 人`;
+  $("rosterPreview").innerHTML=r.map(x=>`<span class="chip">${x}</span>`).join("");
+}
+document.querySelectorAll('input[name=rosterMode]').forEach(el=>{
+  el.addEventListener("change",()=>{
+    const isNum=el.value==="number"&&el.checked;
+    $("numberMode").style.display=isNum?"block":"none";
+    $("nameMode").style.display=isNum?"none":"block";
+    renderRosterPreview();
+  });
+});
+$("saveRoster").addEventListener("click",()=>{ saveRosterSettings(); beep(880,0.12); });
+["numStart","numEnd","numExclude","nameList"].forEach(id=>$(id).addEventListener("input",renderRosterPreview));
+(function initRoster(){
+  const d=loadRosterSettings();
+  if(d){
+    if(d.mode==="name"){ document.querySelector('input[name=rosterMode][value=name]').checked=true; $("numberMode").style.display="none"; $("nameMode").style.display="block"; }
+    $("numStart").value=d.start||1; $("numEnd").value=d.end||30; $("numExclude").value=d.exclude||""; $("nameList").value=d.names||"";
+  }
+  renderRosterPreview();
+})();
+
+/* ========== 倒數計時 ========== */
+let timerTotal=300, timerLeft=300, timerInt=null;
+function fmtT(s){ const m=Math.floor(s/60), ss=s%60; return String(m).padStart(2,"0")+":"+String(ss).padStart(2,"0"); }
+function renderTimer(){
+  const d=$("timerDisplay");
+  d.textContent=fmtT(timerLeft);
+  d.className="time-display"+(timerLeft<=10&&timerLeft>0?" danger":(timerLeft<=30&&timerLeft>0?" warning":""));
+  $("timerBarFill").style.width=(timerTotal>0?(timerLeft/timerTotal*100):0)+"%";
+}
+function setTimer(sec){ stopTimerTick(); timerTotal=sec; timerLeft=sec; renderTimer(); }
+function setTimerCustom(){
+  const m=parseInt($("tMin").value)||0, s=parseInt($("tSec").value)||0;
+  setTimer(Math.max(1,m*60+s));
+}
+function toggleTimer(){
+  if(timerInt){ stopTimerTick(); return; }
+  if(timerLeft<=0) timerLeft=timerTotal;
+  $("timerStartBtn").textContent="⏸ 暫停"; $("timerStartBtn").classList.remove("green");
+  timerInt=setInterval(()=>{
+    timerLeft--;
+    if(timerLeft<=5&&timerLeft>0) beep(880,0.1);
+    renderTimer();
+    if(timerLeft<=0){
+      stopTimerTick(); alarmSound(); document.body.classList.add("alarm");
+    }
+  },1000);
+}
+function stopTimerTick(){ clearInterval(timerInt); timerInt=null; $("timerStartBtn").textContent="▶ 開始"; $("timerStartBtn").classList.add("green"); }
+function resetTimer(){ stopTimerTick(); timerLeft=timerTotal; document.body.classList.remove("alarm"); renderTimer(); }
+document.body.addEventListener("click",()=>document.body.classList.remove("alarm"));
+renderTimer();
+
+/* ========== 碼表 ========== */
+let swMs=0, swInt=null, swLapN=0;
+function fmtSw(ms){
+  const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), t=Math.floor(ms%1000/100);
+  return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")+"."+t;
+}
+function toggleSw(){
+  if(swInt){ clearInterval(swInt); swInt=null; $("swStartBtn").textContent="▶ 開始"; $("swStartBtn").classList.add("green"); return; }
+  const startAt=Date.now()-swMs;
+  $("swStartBtn").textContent="⏸ 暫停"; $("swStartBtn").classList.remove("green");
+  swInt=setInterval(()=>{ swMs=Date.now()-startAt; $("swDisplay").textContent=fmtSw(swMs); },100);
+}
+function lapSw(){ if(swMs>0){ swLapN++; $("swLaps").innerHTML=`<div>🚩 第 ${swLapN} 段：${fmtSw(swMs)}</div>`+$("swLaps").innerHTML; } }
+function resetSw(){ clearInterval(swInt); swInt=null; swMs=0; swLapN=0; $("swDisplay").textContent="00:00.0"; $("swLaps").innerHTML=""; $("swStartBtn").textContent="▶ 開始"; $("swStartBtn").classList.add("green"); }
+
+/* ========== 依序抽籤 ========== */
+let drawPool=[], drawDone=[], drawAnim=null;
+function resetDraw(){
+  drawPool=getRoster(); drawDone=[]; clearInterval(drawAnim); drawAnim=null;
+  $("drawDisplay").textContent="？"; renderDraw();
+}
+function renderDraw(){
+  if(drawPool.length===0&&drawDone.length===0) drawPool=getRoster();
+  $("drawRemainInfo").textContent=`剩餘 ${drawPool.length} 人｜已抽出 ${drawDone.length} 人`;
+  $("drawnList").innerHTML=drawDone.length?drawDone.map((x,i)=>`<span class="chip drawn">${i+1}. ${x}</span>`).join(""):'<span class="hint">尚未抽籤</span>';
+  $("remainList").innerHTML=drawPool.map(x=>`<span class="chip">${x}</span>`).join("")||'<span class="hint">（空）</span>';
+}
+function drawOne(){
+  if(drawAnim) return;
+  if(drawPool.length===0){ $("drawDisplay").textContent="抽完了！"; alarmSound(); return; }
+  const winner=drawPool[Math.floor(Math.random()*drawPool.length)];
+  let n=0;
+  drawAnim=setInterval(()=>{
+    n++;
+    $("drawDisplay").textContent=drawPool[Math.floor(Math.random()*drawPool.length)];
+    beep(440+n*40,0.05);
+    if(n>=12){
+      clearInterval(drawAnim); drawAnim=null;
+      $("drawDisplay").textContent=winner;
+      drawPool=drawPool.filter(x=>x!==winner);
+      drawDone.push(winner);
+      beep(1320,0.3); renderDraw();
+    }
+  },80);
+}
+resetDraw();
+
+/* ========== 隨機分組 ========== */
+const groupColors=["#0b7a5c","#0e7490","#1d4ed8","#6d28d9","#a16207","#b91c1c","#be185d","#3f6212","#0f766e","#92400e"];
+function doGroup(){
+  const roster=getRoster();
+  if(roster.length<2){ alert("名單人數不足，請先到「名單設定」建立名單。"); return; }
+  const mode=document.querySelector('input[name=groupMode]:checked').value;
+  let count;
+  if(mode==="count"){ count=parseInt($("groupCount").value)||2; }
+  else{ const size=Math.max(2,parseInt($("groupSize").value)||2); count=Math.ceil(roster.length/size); }
+  count=Math.min(Math.max(2,count),roster.length);
+  const s=shuffle(roster);
+  const groups=Array.from({length:count},()=>[]);
+  s.forEach((x,i)=>groups[i%count].push(x));
+  $("groupResult").innerHTML=groups.map((g,i)=>
+    `<div class="group-card" style="background:${groupColors[i%groupColors.length]}">
+       <h3>第 ${i+1} 組（${g.length} 人）</h3>
+       <div class="members">${g.join("、")}</div>
+     </div>`).join("");
+  beep(990,0.2);
+}
+
+/* ========== 幸運轉盤 ========== */
+let wheelPool=null, wheelAngle=0, wheelSpinning=false;
+const wheelColors=["#0b7a5c","#0e7490","#1d4ed8","#6d28d9","#a16207","#b91c1c","#be185d","#3f6212"];
+function getWheelPool(){ if(!wheelPool) wheelPool=getRoster(); return wheelPool; }
+function resetWheel(){ wheelPool=getRoster(); wheelAngle=0; $("wheelWinner").textContent=""; drawWheel(); }
+function drawWheel(){
+  const cv=$("wheelCanvas"), ctx=cv.getContext("2d");
+  const pool=getWheelPool(), n=pool.length;
+  const cx=cv.width/2, cy=cv.height/2, r=cv.width/2-8;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  $("wheelInfo").textContent=`轉盤上還有 ${n} 人`;
+  if(n===0){
+    ctx.fillStyle="#7da893"; ctx.font="24px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("已全部抽完，請按重置",cx,cy); return;
+  }
+  const arc=2*Math.PI/n;
+  for(let i=0;i<n;i++){
+    const a0=wheelAngle+i*arc;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,a0,a0+arc); ctx.closePath();
+    ctx.fillStyle=wheelColors[i%wheelColors.length]; ctx.fill();
+    ctx.strokeStyle="#07120d"; ctx.lineWidth=2; ctx.stroke();
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(a0+arc/2); ctx.textAlign="right"; ctx.fillStyle="#fff";
+    ctx.font="bold "+Math.max(12,Math.min(22,300/Math.max(6,n)))+"px sans-serif";
+    ctx.fillText(pool[i], r-14, 6);
+    ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(cx,cy,26,0,2*Math.PI); ctx.fillStyle="#0e1f17"; ctx.fill();
+  ctx.strokeStyle="#00e5a0"; ctx.lineWidth=2; ctx.stroke();
+}
+function spinWheel(){
+  if(wheelSpinning) return;
+  const pool=getWheelPool();
+  if(pool.length===0){ resetWheel(); return; }
+  wheelSpinning=true; $("wheelWinner").textContent=""; $("spinBtn").disabled=true;
+  const start=wheelAngle;
+  const extra=(4+Math.random()*4)*2*Math.PI+Math.random()*2*Math.PI;
+  const dur=4000, t0=performance.now();
+  function frame(t){
+    const p=Math.min(1,(t-t0)/dur);
+    const ease=1-Math.pow(1-p,3);
+    wheelAngle=start+extra*ease;
+    drawWheel();
+    if(p<1){ requestAnimationFrame(frame); }
+    else{
+      wheelSpinning=false; $("spinBtn").disabled=false;
+      const n=pool.length, arc=2*Math.PI/n;
+      const pointer=(-Math.PI/2 - wheelAngle)%(2*Math.PI);
+      const idx=Math.floor(((pointer%(2*Math.PI))+2*Math.PI)%(2*Math.PI)/arc);
+      const winner=pool[idx];
+      $("wheelWinner").textContent="🎉 "+winner;
+      beep(1320,0.4); beep(1760,0.4,0.2);
+      if($("wheelRemove").checked){ wheelPool=pool.filter(x=>x!==winner); setTimeout(drawWheel,1200); }
+    }
+  }
+  requestAnimationFrame(frame);
+}
+drawWheel();
+
+/* ========== 計分板 ========== */
+let teams=[];
+try{ teams=JSON.parse(localStorage.getItem("ct_teams")||"[]"); }catch(e){ teams=[]; }
+function saveTeams(){ localStorage.setItem("ct_teams",JSON.stringify(teams)); }
+function renderTeams(){
+  const max=teams.length?Math.max(...teams.map(t=>t.score)):0;
+  $("teamsWrap").innerHTML=teams.map((t,i)=>
+    `<div class="team${t.score===max&&max>0?" leader":""}">
+       <button class="del" onclick="delTeam(${i})">✕</button>
+       <div class="tname">${t.score===max&&max>0?"👑 ":""}${t.name}</div>
+       <div class="tscore">${t.score}</div>
+       <div class="tbtns">
+         <button style="background:var(--good)" onclick="addScore(${i},1)">+1</button>
+         <button style="background:var(--good)" onclick="addScore(${i},5)">+5</button>
+         <button style="background:var(--bad)" onclick="addScore(${i},-1)">−1</button>
+       </div>
+     </div>`).join("")||'<div class="card hint">尚未建立組別，請新增組別或按「快速建立 4 組」。</div>';
+}
+function addTeam(){
+  const name=$("newTeamName").value.trim()||("第 "+(teams.length+1)+" 組");
+  teams.push({name,score:0}); $("newTeamName").value=""; saveTeams(); renderTeams();
+}
+function quickTeams(){ teams=[1,2,3,4].map(i=>({name:"第 "+i+" 組",score:0})); saveTeams(); renderTeams(); }
+function addScore(i,d){ teams[i].score+=d; saveTeams(); renderTeams(); if(d>0)beep(1100,0.1); else beep(330,0.15); }
+function delTeam(i){ teams.splice(i,1); saveTeams(); renderTeams(); }
+function resetScores(){ teams.forEach(t=>t.score=0); saveTeams(); renderTeams(); }
+function clearTeams(){ if(confirm("確定要清除所有組別？")){ teams=[]; saveTeams(); renderTeams(); } }
+renderTeams();
+
+/* ========== 隨機順序 ========== */
+function makeOrder(){
+  const r=getRoster();
+  if(r.length===0){ alert("請先到「名單設定」建立名單。"); return; }
+  const s=shuffle(r);
+  $("orderResult").innerHTML=s.map((x,i)=>`<span class="chip">${i+1}. ${x}</span>`).join("");
+  beep(990,0.2);
+}
+
+/* ========== 音量偵測 ========== */
+let noiseStream=null, noiseInt=null, noiseCount=0, noiseOver=false;
+$("noiseThreshold").addEventListener("input",()=>{
+  $("noiseThresholdVal").textContent=$("noiseThreshold").value+"%";
+  $("noiseLine").style.left=$("noiseThreshold").value+"%";
+});
+async function toggleNoise(){
+  if(noiseStream){ stopNoise(); return; }
+  try{
+    noiseStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){ alert("無法取得麥克風權限："+e.message); return; }
+  window._actx = window._actx || new (window.AudioContext||window.webkitAudioContext)();
+  const ctx=window._actx;
+  const src=ctx.createMediaStreamSource(noiseStream);
+  const analyser=ctx.createAnalyser(); analyser.fftSize=1024;
+  src.connect(analyser);
+  const buf=new Uint8Array(analyser.fftSize);
+  $("noiseBtn").textContent="⏹ 停止偵測"; $("noiseBtn").classList.remove("green"); $("noiseBtn").classList.add("red");
+  noiseInt=setInterval(()=>{
+    analyser.getByteTimeDomainData(buf);
+    let sum=0;
+    for(let i=0;i<buf.length;i++){ const v=(buf[i]-128)/128; sum+=v*v; }
+    const rms=Math.sqrt(sum/buf.length);
+    const level=Math.min(100,Math.round(rms*300));
+    $("noiseBar").style.width=level+"%";
+    const th=parseInt($("noiseThreshold").value);
+    const st=$("noiseStatus");
+    if(level>=th){
+      st.textContent="🤫 太大聲了！"; st.className="noise-status loud";
+      if(!noiseOver){ noiseOver=true; noiseCount++; $("noiseCount").textContent=noiseCount; beep(220,0.3); }
+    }else{
+      st.textContent="😊 音量 OK"; st.className="noise-status quiet";
+      if(level<th*0.8) noiseOver=false;
+    }
+  },100);
+}
+function stopNoise(){
+  clearInterval(noiseInt); noiseInt=null;
+  if(noiseStream){ noiseStream.getTracks().forEach(t=>t.stop()); noiseStream=null; }
+  $("noiseBtn").textContent="🎤 開始偵測"; $("noiseBtn").classList.add("green"); $("noiseBtn").classList.remove("red");
+  $("noiseBar").style.width="0%"; $("noiseStatus").textContent="已停止"; $("noiseStatus").className="noise-status";
+}
+</script>
+</body>
+</html>
