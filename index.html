@@ -95,6 +95,10 @@
   .noise-status{font-size:2rem; font-weight:800; text-align:center; margin-top:8px;}
   .noise-status.quiet{color:var(--good);}
   .noise-status.loud{color:var(--bad); animation:blink .5s infinite;}
+  .export-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);}
+  .export-row.hide{display:none;}
+  .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--card); border:1px solid var(--accent); color:var(--accent); padding:12px 22px; border-radius:10px; box-shadow:var(--glow); font-size:1rem; opacity:0; pointer-events:none; transition:.25s; z-index:99;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
   /* 隨機順序 */
   .order-list{display:flex; flex-wrap:wrap; gap:8px;}
   .order-list .chip{font-size:1.15rem;}
@@ -229,6 +233,11 @@
       <button class="btn big" onclick="doGroup()">🎲 開始分組</button>
     </div>
     <p class="hint">使用「名單設定」中的名單；人數無法整除時會平均分配。</p>
+    <div class="export-row hide" id="groupExport">
+      <button class="btn" onclick="downloadGroupCSV()">⬇️ 下載分組名單（CSV）</button>
+      <button class="btn gray" onclick="copyGroupTable()">📋 複製表格</button>
+      <span class="hint">CSV 可直接用 Excel 開啟；「複製表格」後可貼到 Google 試算表</span>
+    </div>
   </div>
   <div class="groups" id="groupResult"></div>
 </section>
@@ -297,6 +306,7 @@
 
 </main>
 <footer>教師教學小工具｜單一檔案，離線可用，資料儲存在本機瀏覽器</footer>
+<div class="toast" id="toast"></div>
 
 <script>
 "use strict";
@@ -454,6 +464,7 @@ function drawOne(){
 resetDraw();
 
 /* ========== 隨機分組 ========== */
+let lastGroups=[];
 const groupColors=["#0b7a5c","#0e7490","#1d4ed8","#6d28d9","#a16207","#b91c1c","#be185d","#3f6212","#0f766e","#92400e"];
 function doGroup(){
   const roster=getRoster();
@@ -471,7 +482,57 @@ function doGroup(){
        <h3>第 ${i+1} 組（${g.length} 人）</h3>
        <div class="members">${g.join("、")}</div>
      </div>`).join("");
+  lastGroups=groups;
+  $("groupExport").classList.remove("hide");
   beep(990,0.2);
+}
+
+/* ---- 分組結果匯出 ---- */
+function groupRows(){
+  const mode=document.querySelector('input[name=rosterMode]:checked').value;
+  const head=mode==="number"?"號碼":"姓名";
+  const order=getRoster();
+  const rows=[];
+  lastGroups.forEach((g,i)=>g.forEach(m=>rows.push([m,i+1])));
+  rows.sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));
+  return {head,rows};
+}
+function stamp(){
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+}
+function toast(msg){
+  const t=$("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._tid); t._tid=setTimeout(()=>t.classList.remove("show"),1800);
+}
+function downloadGroupCSV(){
+  if(!lastGroups.length){ alert("請先按「開始分組」。"); return; }
+  const {head,rows}=groupRows();
+  const esc=v=>/[",\n]/.test(v)?'"'+String(v).replace(/"/g,'""')+'"':String(v);
+  const csv=[[head,"組別"],...rows].map(r=>r.map(esc).join(",")).join("\r\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`group-list_${stamp()}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+  beep(1100,0.15); toast("已下載 "+a.download);
+}
+function copyGroupTable(){
+  if(!lastGroups.length){ alert("請先按「開始分組」。"); return; }
+  const {head,rows}=groupRows();
+  const tsv=[[head,"組別"],...rows].map(r=>r.join("\t")).join("\n");
+  const done=()=>{ beep(1100,0.15); toast("已複製，可直接貼到試算表"); };
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(tsv).then(done,()=>fallbackCopy(tsv,done));
+  }else{ fallbackCopy(tsv,done); }
+}
+function fallbackCopy(text,done){
+  const ta=document.createElement("textarea");
+  ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); done(); }catch(e){ alert("無法自動複製，請改用下載 CSV。"); }
+  ta.remove();
 }
 
 /* ========== 幸運轉盤 ========== */
