@@ -660,17 +660,22 @@ function spinWheel(){
   const start=wheelAngle;
   const extra=(4+Math.random()*4)*2*Math.PI+Math.random()*2*Math.PI;
   const dur=4000, t0=performance.now();
+  const n=pool.length, arc=2*Math.PI/n;
+  const sliceIdx=angle=>{
+    const pointer=(-Math.PI/2 - angle)%(2*Math.PI);
+    return Math.floor(((pointer%(2*Math.PI))+2*Math.PI)%(2*Math.PI)/arc);
+  };
+  let lastTickIdx=sliceIdx(wheelAngle);
   function frame(t){
     const p=Math.min(1,(t-t0)/dur);
     const ease=1-Math.pow(1-p,3);
     wheelAngle=start+extra*ease;
     drawWheel();
+    const idx=sliceIdx(wheelAngle);
+    if(idx!==lastTickIdx){ lastTickIdx=idx; beep(1200,0.03); }
     if(p<1){ requestAnimationFrame(frame); }
     else{
       wheelSpinning=false; $("spinBtn").disabled=false;
-      const n=pool.length, arc=2*Math.PI/n;
-      const pointer=(-Math.PI/2 - wheelAngle)%(2*Math.PI);
-      const idx=Math.floor(((pointer%(2*Math.PI))+2*Math.PI)%(2*Math.PI)/arc);
       const winner=pool[idx];
       $("wheelWinner").textContent="🎉 "+displayName(winner);
       beep(1320,0.4); beep(1760,0.4,0.2);
